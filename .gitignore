@@ -1,0 +1,25 @@
+# Data and weights: never commit
+data/raw/*
+data/processed/*
+!data/raw/zuco1/.gitkeep
+!data/raw/zuco2/.gitkeep
+!data/processed/.gitkeep
+experiments/results/checkpoints/
+*.mat
+*.fif
+*.pt
+*.pth
+*.ckpt
+*.npy
+*.npz
+
+# Python / env
+.venv/
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Secrets / editor
+.env
+.vscode/
