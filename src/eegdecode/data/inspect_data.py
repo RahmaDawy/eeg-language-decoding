@@ -101,7 +101,7 @@ def _walk_v5(obj, name, depth, max_depth, indent=0):
 def _walk_h5(path: Path, max_depth: int):
     with h5py.File(path, "r") as f:
         def visit(name, item):
-            if name.count("/") >= max_depth:
+            if name.startswith("#") or name.count("/") >= max_depth:
                 return
             pad = "  " * name.count("/")
             leaf = name.split("/")[-1]

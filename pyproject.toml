@@ -12,6 +12,7 @@ dependencies = [
   "scipy",
   "pandas",
   "h5py",
+  "scikit-learn",
 ]
 
 [project.optional-dependencies]
