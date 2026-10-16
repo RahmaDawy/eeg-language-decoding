@@ -1,0 +1,21 @@
+Control Conditions
+The folder ‘answers/’ contains the Matlab files with the answers of the participants to the control questions.
+
+For each subjects there are 4 files: one for normal reading, one for task-specific reading, and two for sentiment reading (i.e. T1 for the sentences recorded in the first session and T2 for the sentences recorded in the second session).
+
+For the details about the control questions and the instructions to the participants, please refer to the original publication.
+
+Files
+In the SR (sentiment reading - task 1) files, the Matlab structure contains two columns: sentence ID, participant answer (rating from 1 to 5).
+
+In the NR (normal reading - task 2) files, the Matlab structure contains three columns: paragraph ID, sentence ID, participant answer (1-3).
+
+In the TSR (task-specific reading - task 3) files, the Matlab structure contains one column for each sentence with the participant answer (1 = sentence contains relation, 2 = does not contain relation).
+
+
+Control Conditions
+The folder ‘answers/’ contains the Matlab files with the answers of the participants to the control questions.
+
+For each subjects there is a folder with 1 file per block (7 NR and 7 TSR blocks). Each file contains paragraph ID, sentence ID, participant answer for each sentence in the corresponding block.
+
+For the details about the control questions and the instructions to the participants, please refer to the original publication.

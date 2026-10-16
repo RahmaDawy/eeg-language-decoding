@@ -1,0 +1,113 @@
+﻿
+=== data\raw\zuco1\task2 - NR\Preprocessed\ZKB\gip_ZKB_NR1_EEG.mat (106.7 MB)
+EEG/data: shape=(267638, 105) dtype=float32
+EEG/srate: 500.0
+EEG/nbchan: 105.0
+EEG/pnts: 267638.0
+EEG/trials: 1.0
+EEG/xmin: -0.0
+EEG/xmax: 535.274
+EEG/ref: 'common'
+EEG/times: first=-0.000 second=2.000 last=535274.000 step=2.0000
+channels (105): ['E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E9', 'E10', 'E11', 'E12', 'E13', 'E15', 'E16', 'E18', 'E19', 'E20', 'E22', 'E23', 'E24', 'E26', 'E27', 'E28', 'E29', 'E30', 'E31', 'E33', 'E34', 'E35', 'E36', 'E37', 'E38', 'E39', 'E40', 'E41', 'E42', 'E43', 'E44', 'E45', 'E46', 'E47', 'E50', 'E51', 'E52', 'E53', 'E54', 'E55', 'E57', 'E58', 'E59', 'E60', 'E61', 'E62', 'E64', 'E65', 'E66', 'E67', 'E69', 'E70', 'E71', 'E72', 'E74', 'E75', 'E76', 'E77', 'E78', 'E79', 'E80', 'E82', 'E83', 'E84', 'E85', 'E86', 'E87', 'E89', 'E90', 'E91', 'E92', 'E93', 'E95', 'E96', 'E97', 'E98', 'E100', 'E101', 'E102', 'E103', 'E104', 'E105', 'E106', 'E108', 'E109', 'E110', 'E111', 'E112', 'E114', 'E115', 'E116', 'E117', 'E118', 'E120', 'E121', 'E122', 'E123', 'E124', 'Cz']
+layout: samples x channels
+NaN count: 0, Inf count: 0
+fraction of exactly-zero values: 0.00952
+values (subsampled): min=-29.42 max=24.15 p0.1=-13.39 median=0 p99.9=12.71
+per-channel std: min=0 median=2.507 max=5.505
+flat channels (std==0): ['Cz']
+eventdescription: list[5] first 10: [None, None, None, None, None]
+events: 108; type counts: {'90': 1, '12': 8, '13': 8, '15': 8, '10': 41, '11': 41, '18': 1}
+idx | type | latency(sample) | latency(s) | value
+  0 | '90' | 12.0 | 0.024 | 'trigger'
+  1 | '12' | 1026.0 | 2.052 | 'trigger'
+  2 | '13' | 3763.0 | 7.526 | 'trigger'
+  3 | '15' | 5367.0 | 10.734 | 'trigger'
+  4 | '10' | 5377.0 | 10.754 | 'trigger'
+  5 | '11' | 10547.0 | 21.094 | 'trigger'
+  6 | '10' | 10551.0 | 21.102 | 'trigger'
+  7 | '11' | 18791.0 | 37.582 | 'trigger'
+  8 | '10' | 18796.0 | 37.592 | 'trigger'
+  9 | '11' | 27384.0 | 54.768 | 'trigger'
+ 10 | '10' | 27388.0 | 54.776 | 'trigger'
+ 11 | '11' | 34685.0 | 69.370 | 'trigger'
+...
+104 | '15' | 265170.0 | 530.340 | 'trigger'
+105 | '10' | 265172.0 | 530.344 | 'trigger'
+106 | '11' | 266406.0 | 532.812 | 'trigger'
+107 | '18' | 266407.0 | 532.814 | 'trigger'
+10->11 windows: 41 (problems=0); duration s: min=2.47 median=8.60 max=29.50
+
+quality / preprocessing fields (missing ones are skipped):
+  auto_badchans: array(30, 1) dtype=float64 min=25 max=89
+  man_badchans: array(30, 1) dtype=float64 min=25 max=89
+  is_interpolated: 1
+  tobe_interpolated: None
+  ica_rejected: array(24, 1) dtype=float64 min=0 max=0
+  params/filter_params/high_freq: 0.5
+  params/filter_params/low_freq: -1.0
+  params/filter_params/notch_freq: 50.0
+  EEG/etc/clean_channel_mask: array(105, 1) dtype=uint8 min=0 max=1
+
+=== data\raw\zuco2\task1 - NR\Preprocessed\YAC\gip_YAC_NR1_EEG.mat (195.5 MB)
+EEG/data: shape=(225411, 105) dtype=float64
+EEG/srate: 500.0
+EEG/nbchan: 105.0
+EEG/pnts: 225411.0
+EEG/trials: 1.0
+EEG/xmin: -0.0
+EEG/xmax: 450.82
+EEG/ref: 'common'
+EEG/times: first=-0.000 second=2.000 last=450820.000 step=2.0000
+channels (105): ['E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E9', 'E10', 'E11', 'E12', 'E13', 'E15', 'E16', 'E18', 'E19', 'E20', 'E22', 'E23', 'E24', 'E26', 'E27', 'E28', 'E29', 'E30', 'E31', 'E33', 'E34', 'E35', 'E36', 'E37', 'E38', 'E39', 'E40', 'E41', 'E42', 'E43', 'E44', 'E45', 'E46', 'E47', 'E50', 'E51', 'E52', 'E53', 'E54', 'E55', 'E57', 'E58', 'E59', 'E60', 'E61', 'E62', 'E64', 'E65', 'E66', 'E67', 'E69', 'E70', 'E71', 'E72', 'E74', 'E75', 'E76', 'E77', 'E78', 'E79', 'E80', 'E82', 'E83', 'E84', 'E85', 'E86', 'E87', 'E89', 'E90', 'E91', 'E92', 'E93', 'E95', 'E96', 'E97', 'E98', 'E100', 'E101', 'E102', 'E103', 'E104', 'E105', 'E106', 'E108', 'E109', 'E110', 'E111', 'E112', 'E114', 'E115', 'E116', 'E117', 'E118', 'E120', 'E121', 'E122', 'E123', 'E124', 'Cz']
+layout: samples x channels
+NaN count: 0, Inf count: 0
+fraction of exactly-zero values: 0.00952
+values (subsampled): min=-23.26 max=24.95 p0.1=-12.93 median=0 p99.9=13.07
+per-channel std: min=0 median=1.791 max=6.897
+flat channels (std==0): ['Cz']
+eventdescription: list[5] first 10: [None, None, None, None, None]
+events: 110; type counts: {'90': 1, '10': 42, '11': 42, '12': 8, '13': 8, '15': 8, '20': 1}
+idx | type | latency(sample) | latency(s) | value
+  0 | '90' | 15.0 | 0.030 | 'trigger'
+  1 | '10' | 1022.0 | 2.044 | 'trigger'
+  2 | '11' | 5781.0 | 11.562 | 'trigger'
+  3 | '10' | 5834.0 | 11.668 | 'trigger'
+  4 | '11' | 9761.0 | 19.522 | 'trigger'
+  5 | '12' | 9815.0 | 19.630 | 'trigger'
+  6 | '13' | 12457.0 | 24.914 | 'trigger'
+  7 | '15' | 16105.0 | 32.210 | 'trigger'
+  8 | '10' | 16136.0 | 32.272 | 'trigger'
+  9 | '11' | 21149.0 | 42.298 | 'trigger'
+ 10 | '10' | 21202.0 | 42.404 | 'trigger'
+ 11 | '11' | 25234.0 | 50.468 | 'trigger'
+...
+106 | '12' | 217517.0 | 435.034 | 'trigger'
+107 | '13' | 223390.0 | 446.780 | 'trigger'
+108 | '15' | 225154.0 | 450.308 | 'trigger'
+109 | '20' | 225180.0 | 450.360 | 'trigger'
+10->11 windows: 42 (problems=0); duration s: min=3.53 median=6.75 max=17.79
+
+quality / preprocessing fields (missing ones are skipped):
+  automagic/SamplingFrequency: 500.0
+  automagic/RecordingDuration: 225411.0
+  automagic/EEGChannelCount: 105.0
+  automagic/qualityScores/CHV: array(5, 1) [[0.02857142857142857], [0.0], [0.0], [0.0], [0.0]]
+  automagic/qualityScores/MAV: 1.4897513005263248
+  automagic/qualityScores/OHA: array(5, 1) [[5.006727393833613e-05], [3.844828631551551e-06], [2.5350518449790444e-07], [0.0], [0.0]]
+  automagic/qualityScores/RBC: 0.05714285714285714
+  automagic/qualityScores/THV: array(5, 1) [[0.012164446278131945], [0.0], [0.0], [0.0], [0.0]]
+  automagic/qualityThresholds/overallThresh: array(5, 1) [[20.0], [25.0], [30.0], [35.0], [40.0]]
+  automagic/selectedQualityScore/OHA: 2.5350518449790444e-07
+  automagic/finalBadChans: array(6, 1) [[1.0], [6.0], [46.0], [57.0], [96.0], [102.0]]
+  automagic/interpolation/channels: array(6, 1) [[1.0], [6.0], [46.0], [57.0], [96.0], [102.0]]
+  automagic/isInterpolated: 1
+  automagic/isManuallyRated: 0.0
+  automagic/filtering/highpass/freq: 0.5
+  automagic/filtering/lowpass/freq: 50.0
+  EEG/etc/clean_channel_mask: array(1, 104) dtype=uint8 min=0 max=1
+
+=== channel label comparison (file 1 vs file 2)
+same length: True; identical order: True
+only in file 1: []
+only in file 2: []

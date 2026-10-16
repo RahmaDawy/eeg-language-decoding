@@ -23,3 +23,8 @@ __pycache__/
 # Secrets / editor
 .env
 .vscode/
+data/
+*.mat
+*.npy
+.venv/
+__pycache__/
