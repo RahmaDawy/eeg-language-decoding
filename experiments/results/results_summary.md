@@ -78,7 +78,7 @@ _Means over subject folds. Chance = expected score of a random ranking. No signi
 | zuco2 | zuco1 | all_sentences | duration_only | 3115.0000 | 264.0000 | 0.0058 | 0.0038 | 0.0265 | 0.0233 | 0.0049 |
 | zuco2 | zuco1 | all_sentences | random_input | 3115.0000 | 264.0000 | 0.0036 | 0.0038 | 0.0236 | 0.0233 | -0.0003 |
 
-**robustness and self-supervised encoder (unseen subjects + unseen sentences; noise added to test EEG only)**
+**representations, robustness and quality weighting (unseen subjects + unseen sentences; noise added to test EEG only)**
 
 | dataset | representation | method | noise | n_candidates | top1 | chance_top1 | mrr | chance_mrr | sim_margin |
 |---|---|---|---|---|---|---|---|---|---|
@@ -118,3 +118,36 @@ _Means over subject folds. Chance = expected score of a random ranking. No signi
 | zuco2 | ssl | untrained_encoder | moderate | 40.0000 | 0.0247 | 0.0252 | 0.1030 | 0.1076 | -0.0042 |
 | zuco2 | ssl | untrained_encoder | strong | 40.0000 | 0.0319 | 0.0252 | 0.1139 | 0.1076 | 0.0017 |
 | zuco2 | ssl | random_input | clean | 40.0000 | 0.0266 | 0.0252 | 0.1067 | 0.1076 | -0.0014 |
+| zuco1 | cbramod | frozen_pretrained | clean | 39.0000 | 0.0245 | 0.0256 | 0.1109 | 0.1091 | 0.0033 |
+| zuco1 | cbramod | frozen_pretrained | mild | 39.0000 | 0.0268 | 0.0256 | 0.1108 | 0.1091 | 0.0025 |
+| zuco1 | cbramod | frozen_pretrained | moderate | 39.0000 | 0.0294 | 0.0256 | 0.1121 | 0.1091 | 0.0015 |
+| zuco1 | cbramod | frozen_pretrained | strong | 39.0000 | 0.0177 | 0.0256 | 0.1018 | 0.1091 | -0.0001 |
+| zuco1 | cbramod | frozen_pretrained_quality_weighted | clean | 39.0000 | 0.0244 | 0.0256 | 0.1078 | 0.1091 | 0.0033 |
+| zuco1 | cbramod | frozen_pretrained_quality_weighted | mild | 39.0000 | 0.0201 | 0.0256 | 0.1072 | 0.1091 | 0.0029 |
+| zuco1 | cbramod | frozen_pretrained_quality_weighted | moderate | 39.0000 | 0.0223 | 0.0256 | 0.1067 | 0.1091 | 0.0011 |
+| zuco1 | cbramod | frozen_pretrained_quality_weighted | strong | 39.0000 | 0.0221 | 0.0256 | 0.1058 | 0.1091 | -0.0006 |
+| zuco1 | cbramod | untrained_cbramod | clean | 39.0000 | 0.0225 | 0.0256 | 0.1022 | 0.1091 | -0.0019 |
+| zuco1 | cbramod | random_input | clean | 39.0000 | 0.0223 | 0.0256 | 0.1061 | 0.1091 | -0.0012 |
+| zuco2 | cbramod | frozen_pretrained | clean | 40.0000 | 0.0290 | 0.0252 | 0.1173 | 0.1076 | 0.0061 |
+| zuco2 | cbramod | frozen_pretrained | mild | 40.0000 | 0.0250 | 0.0252 | 0.1130 | 0.1076 | 0.0089 |
+| zuco2 | cbramod | frozen_pretrained | moderate | 40.0000 | 0.0137 | 0.0252 | 0.1024 | 0.1076 | 0.0047 |
+| zuco2 | cbramod | frozen_pretrained | strong | 40.0000 | 0.0243 | 0.0252 | 0.1069 | 0.1076 | 0.0015 |
+| zuco2 | cbramod | frozen_pretrained_quality_weighted | clean | 40.0000 | 0.0115 | 0.0252 | 0.0896 | 0.1076 | -0.0037 |
+| zuco2 | cbramod | frozen_pretrained_quality_weighted | mild | 40.0000 | 0.0103 | 0.0252 | 0.0941 | 0.1076 | -0.0001 |
+| zuco2 | cbramod | frozen_pretrained_quality_weighted | moderate | 40.0000 | 0.0122 | 0.0252 | 0.0989 | 0.1076 | 0.0007 |
+| zuco2 | cbramod | frozen_pretrained_quality_weighted | strong | 40.0000 | 0.0291 | 0.0252 | 0.1083 | 0.1076 | -0.0012 |
+| zuco2 | cbramod | untrained_cbramod | clean | 40.0000 | 0.0199 | 0.0252 | 0.1106 | 0.1076 | 0.0059 |
+| zuco2 | cbramod | random_input | clean | 40.0000 | 0.0226 | 0.0252 | 0.1040 | 0.1076 | -0.0023 |
+
+**subject-level analysis (clean EEG, unseen subjects + unseen sentences): mean over test subjects, 95% bootstrap CI from resampling subjects (5000 resamples)**
+
+| dataset | method | n_subjects | mrr_minus_chance_mean | mrr_minus_chance_ci_lo | mrr_minus_chance_ci_hi | sim_margin_mean | sim_margin_ci_lo | sim_margin_ci_hi |
+|---|---|---|---|---|---|---|---|---|
+| zuco1 | cbramod_frozen | 12 | 0.0027 | -0.0069 | 0.0138 | 0.0035 | -0.0006 | 0.0079 |
+| zuco1 | cbramod_untrained | 12 | -0.0068 | -0.0166 | 0.0019 | -0.0020 | -0.0056 | 0.0012 |
+| zuco1 | bandpower | 12 | -0.0031 | -0.0128 | 0.0057 | 0.0033 | -0.0029 | 0.0092 |
+| zuco1 | random_input | 12 | -0.0000 | -0.0094 | 0.0092 | -0.0012 | -0.0078 | 0.0045 |
+| zuco2 | cbramod_frozen | 8 | 0.0101 | 0.0006 | 0.0238 | 0.0067 | -0.0038 | 0.0188 |
+| zuco2 | cbramod_untrained | 8 | 0.0029 | -0.0101 | 0.0159 | 0.0062 | 0.0004 | 0.0117 |
+| zuco2 | bandpower | 8 | -0.0054 | -0.0193 | 0.0116 | 0.0037 | -0.0027 | 0.0110 |
+| zuco2 | random_input | 8 | -0.0127 | -0.0287 | 0.0035 | -0.0050 | -0.0138 | 0.0017 |

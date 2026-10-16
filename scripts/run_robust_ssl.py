@@ -9,6 +9,7 @@ Representations
 Methods: plain | quality_weighted (training rows weighted by 1/(1+max(0,z)) of artifact score z, fitted on training
          rows; no test labels or test performance involved) | untrained_encoder (same net, random weights) | random_input
 Decoder: identical for all: standardise (train only) -> ridge (alpha chosen on validation subjects' clean data) -> cosine ranking.
+Each fold's trained SSL encoder is saved to experiments/checkpoints/ssl_<dataset>_fold<k>.pt
 """
 import argparse
 import copy
@@ -28,6 +29,7 @@ from eegdecode.evaluation.metrics import candidate_index, cosine_matrix, retriev
 P = Path("data/processed")
 OUT = Path("experiments/results/metrics")
 FIG = Path("experiments/results/figures")
+CKPT = Path("experiments/checkpoints")
 LEVELS = ["clean", "mild", "moderate", "strong"]
 NOISE = {"clean": 0.0, "mild": 0.5, "moderate": 1.0, "strong": 2.0}
 ALPHAS = (1.0, 10.0, 100.0, 1e3, 1e4, 1e5)
@@ -242,6 +244,15 @@ def main():
                 cidx = np.sort(np.random.default_rng(a.seed + fi).choice(cidx, a.max_chunks, replace=False))
             print(f"    training SSL encoder on {len(cidx)} chunks from {len(set(d.subject.iloc[tr]))} subjects", flush=True)
             mu, sd = train_ssl(enc, head, CH, cidx, a.epochs, a.batch, device)
+
+            CKPT.mkdir(parents=True, exist_ok=True)
+            ck = CKPT / f"{'pilot_' if a.pilot else ''}ssl_{ds}_fold{fi}.pt"
+            torch.save({"encoder": enc.state_dict(), "head": head.state_dict(), "mu": mu.cpu(), "sd": sd.cpu(),
+                        "dataset": ds, "fold": fi, "train_subjects": sorted(set(d.subject.iloc[tr])),
+                        "args": {k: (v if isinstance(v, (int, float, bool, str)) else str(v))
+                                 for k, v in vars(a).items()}}, ck)
+            print(f"    saved checkpoint {ck}", flush=True)
+
             for method, model in (("ssl_trained", enc), ("untrained_encoder", enc0)):
                 Ztr = embed_windows(model, mu, sd, CH, cw, idx[tr], 0.0, 1, device)
                 Zva = embed_windows(model, mu, sd, CH, cw, idx[va], 0.0, 1, device)
