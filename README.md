@@ -1,211 +1,109 @@
-# EEG Representation Learning for Brain Signal Decoding (ZuCo 1.0 + 2.0)
+# EEG Representation Learning for Brain Signal Decoding
 
-Student research project. Question: can information about the sentence a person is reading be recovered from
-their EEG, **for subjects the model has never seen**, and does this survive added noise and a change of dataset?
-Three EEG representations are compared: log band power, a small self-supervised (contrastive) encoder trained on
-ZuCo, and a **frozen pretrained EEG foundation model (CBraMod)**.
+Does EEG recorded while people read sentences carry information about *which* sentence they read? This project tests that on the ZuCo 1.0 and ZuCo 2.0 datasets with sentence retrieval, using a handcrafted baseline and a self-supervised encoder, unseen-subject and unseen-sentence evaluation, noise and quality experiments, cross-dataset transfer, and random-input and reading-length controls.
 
-**Short answer (numbers and limitations below): no reliable evidence.** Band power, the self-supervised encoder
-and the pretrained encoder all perform at or very close to chance for sentence retrieval on unseen subjects. Random-input
-controls are also at chance, so the pipeline itself is valid. The one slightly above-chance result is a borderline
-effect for the pretrained encoder on ZuCo 2 that is driven by a single subject, does not appear in ZuCo 1, and is not
-clearly different from a randomly initialised copy of the same network. Reading time (sentence duration) is the only
-thing that transfers between datasets.
+**Main finding (negative result).** Under unseen-subject, unseen-sentence evaluation, EEG-based sentence retrieval is at chance level and indistinguishable from random input, for band-power features, the datasets' own features, and a self-supervised encoder trained on ZuCo. The only signal above chance comes from reading length/time, which carries no sentence meaning. A positive control shows the pipeline *can* detect real EEG information: first-fixation duration is predictable from per-word EEG features (within-subject r = 0.146), but word length and sentence content are not. See `reports/final_report.md`.
 
-## What was done
+## Repository layout
 
-- **Data**: ZuCo 1.0 (12 subjects, 71 recordings) and 8 of the 18 ZuCo 2.0 subjects (56 recordings), natural reading,
-  preprocessed EEG, 500 Hz, 105 channels; the flat reference channel Cz is dropped (104 channels).
-- **Windows**: one window per sentence, trigger 10 to trigger 11 (3125 in ZuCo 1, 2424 in ZuCo 2), matched to sentences
-  by order and duration (`scripts/align_windows.py`). Check: the per-subject Spearman correlation between window duration
-  and sentence word count is 0.83 (ZuCo 1) and 0.71 (ZuCo 2), and about 0 for shuffled sentences.
-  70 windows shorter than 1 s were skipped (`scripts/make_signals.py`).
-- **Decoding**: ridge regression from EEG features to the MiniLM sentence embedding, then ranking of candidate sentences
-  by cosine similarity. Metrics: top-1, recall@5/10, MRR, median rank, sim_margin, each with its chance value.
-- **Evaluation**: 4 folds over subjects (test subjects never seen in training or validation). `double` regime: unseen
-  subjects AND unseen sentences (about 39-44 candidates). `subject_only`: unseen subjects only (about 264-296 candidates).
-- **Representations**: (1) log band power, 104 channels x 5 bands; (2) a small 1D-CNN trained without labels
-  (SimCLR-style contrastive loss) on training-subject chunks, compared with the same network untrained;
-  (3) frozen **CBraMod** (`braindecode/cbramod-pretrained`), compared with the same architecture with random weights.
-- **Controls**: random input (same decoder and split), duration-only (reading-time shortcut).
-- **Robustness**: Gaussian noise of 0.5 / 1 / 2 times the per-channel SD added to the **test** EEG only; a label-free
-  artifact score used to down-weight noisy training windows (quality weighting).
-- **Transfer**: decoder fitted on one ZuCo dataset, tested on the other (source-only), both directions, band power only.
-- **Uncertainty**: subject-level bootstrap (resampling test subjects) for the clean-EEG comparison.
+- `src/eegdecode/` - metrics, subject/sentence splits with leakage checks, band-power features, ridge alignment, sentence embeddings, EEG loading
+- `scripts/` - one script per step (`download_zuco.py`, `build_dataset.py`, `align_windows.py`, `run_experiments.py`, `run_transfer.py`, `make_cache.py`, `run_groundtruth.py`, `run_final.py`, `run_words.py`, `run_positive_control.py`)
+- `tests/` - 38 tests (metrics, split integrity, leakage detector, a synthetic retrieval test with a noise-input control, loaders)
+- `experiments/results/` - result CSVs and figures
+- `reports/final_report.md` - methods, results, limitations
 
-## Results
+## Setup (Windows)
 
-<!-- RESULTS:START -->
-_Means over folds; chance is the expected score of a random ranking._
-
-| experiment | dataset | condition | top1 | chance_top1 | mrr | chance_mrr |
-|---|---|---|---|---|---|---|
-| double, raw | zuco1 | eeg_bandpower | 0.0284 | 0.0256 | 0.1110 | 0.1091 |
-| double, raw | zuco1 | duration_only | 0.0373 | 0.0256 | 0.1216 | 0.1091 |
-| double, raw | zuco1 | random_input | 0.0254 | 0.0256 | 0.1079 | 0.1091 |
-| double, raw | zuco2 | eeg_bandpower | 0.0195 | 0.0227 | 0.0957 | 0.0994 |
-| double, raw | zuco2 | duration_only | 0.0137 | 0.0227 | 0.0909 | 0.0994 |
-| double, raw | zuco2 | random_input | 0.0182 | 0.0227 | 0.0982 | 0.0994 |
-| double, subject-norm | zuco1 | eeg_bandpower | 0.0352 | 0.0256 | 0.1252 | 0.1091 |
-| double, subject-norm | zuco1 | duration_only | 0.0373 | 0.0256 | 0.1216 | 0.1091 |
-| double, subject-norm | zuco1 | random_input | 0.0254 | 0.0256 | 0.1079 | 0.1091 |
-| double, subject-norm | zuco2 | eeg_bandpower | 0.0138 | 0.0227 | 0.0917 | 0.0994 |
-| double, subject-norm | zuco2 | duration_only | 0.0137 | 0.0227 | 0.0909 | 0.0994 |
-| double, subject-norm | zuco2 | random_input | 0.0182 | 0.0227 | 0.0982 | 0.0994 |
-| subject_only, raw | zuco1 | eeg_bandpower | 0.0039 | 0.0038 | 0.0254 | 0.0233 |
-| subject_only, raw | zuco1 | duration_only | 0.0077 | 0.0038 | 0.0286 | 0.0233 |
-| subject_only, raw | zuco1 | random_input | 0.0037 | 0.0038 | 0.0235 | 0.0233 |
-| subject_only, raw | zuco2 | eeg_bandpower | 0.0025 | 0.0034 | 0.0219 | 0.0212 |
-| subject_only, raw | zuco2 | duration_only | 0.0042 | 0.0034 | 0.0253 | 0.0212 |
-| subject_only, raw | zuco2 | random_input | 0.0032 | 0.0034 | 0.0210 | 0.0212 |
-| subject_only, subject-norm | zuco1 | eeg_bandpower | 0.0048 | 0.0038 | 0.0254 | 0.0233 |
-| subject_only, subject-norm | zuco1 | duration_only | 0.0077 | 0.0038 | 0.0286 | 0.0233 |
-| subject_only, subject-norm | zuco1 | random_input | 0.0037 | 0.0038 | 0.0235 | 0.0233 |
-| subject_only, subject-norm | zuco2 | eeg_bandpower | 0.0059 | 0.0034 | 0.0224 | 0.0212 |
-| subject_only, subject-norm | zuco2 | duration_only | 0.0042 | 0.0034 | 0.0253 | 0.0212 |
-| subject_only, subject-norm | zuco2 | random_input | 0.0032 | 0.0034 | 0.0210 | 0.0212 |
-| transfer (raw, unseen_sentences) | zuco1->zuco2 | eeg_bandpower | 0.0048 | 0.0039 | 0.0244 | 0.0237 |
-| transfer (raw, unseen_sentences) | zuco1->zuco2 | duration_only | 0.0034 | 0.0039 | 0.0252 | 0.0237 |
-| transfer (raw, unseen_sentences) | zuco1->zuco2 | random_input | 0.0034 | 0.0039 | 0.0229 | 0.0237 |
-| transfer (raw, all_sentences) | zuco1->zuco2 | eeg_bandpower | 0.0038 | 0.0034 | 0.0215 | 0.0211 |
-| transfer (raw, all_sentences) | zuco1->zuco2 | duration_only | 0.0030 | 0.0034 | 0.0217 | 0.0211 |
-| transfer (raw, all_sentences) | zuco1->zuco2 | random_input | 0.0030 | 0.0034 | 0.0209 | 0.0211 |
-| transfer (raw, unseen_sentences) | zuco2->zuco1 | eeg_bandpower | 0.0053 | 0.0044 | 0.0266 | 0.0265 |
-| transfer (raw, unseen_sentences) | zuco2->zuco1 | duration_only | 0.0045 | 0.0044 | 0.0294 | 0.0265 |
-| transfer (raw, unseen_sentences) | zuco2->zuco1 | random_input | 0.0042 | 0.0044 | 0.0263 | 0.0265 |
-| transfer (raw, all_sentences) | zuco2->zuco1 | eeg_bandpower | 0.0045 | 0.0038 | 0.0235 | 0.0233 |
-| transfer (raw, all_sentences) | zuco2->zuco1 | duration_only | 0.0058 | 0.0038 | 0.0265 | 0.0233 |
-| transfer (raw, all_sentences) | zuco2->zuco1 | random_input | 0.0036 | 0.0038 | 0.0236 | 0.0233 |
-| transfer (subject-norm, unseen_sentences) | zuco1->zuco2 | eeg_bandpower | 0.0029 | 0.0039 | 0.0225 | 0.0237 |
-| transfer (subject-norm, unseen_sentences) | zuco1->zuco2 | duration_only | 0.0034 | 0.0039 | 0.0252 | 0.0237 |
-| transfer (subject-norm, unseen_sentences) | zuco1->zuco2 | random_input | 0.0034 | 0.0039 | 0.0229 | 0.0237 |
-| transfer (subject-norm, all_sentences) | zuco1->zuco2 | eeg_bandpower | 0.0025 | 0.0034 | 0.0196 | 0.0211 |
-| transfer (subject-norm, all_sentences) | zuco1->zuco2 | duration_only | 0.0030 | 0.0034 | 0.0217 | 0.0211 |
-| transfer (subject-norm, all_sentences) | zuco1->zuco2 | random_input | 0.0030 | 0.0034 | 0.0209 | 0.0211 |
-| transfer (subject-norm, unseen_sentences) | zuco2->zuco1 | eeg_bandpower | 0.0049 | 0.0044 | 0.0267 | 0.0265 |
-| transfer (subject-norm, unseen_sentences) | zuco2->zuco1 | duration_only | 0.0045 | 0.0044 | 0.0294 | 0.0265 |
-| transfer (subject-norm, unseen_sentences) | zuco2->zuco1 | random_input | 0.0042 | 0.0044 | 0.0263 | 0.0265 |
-| transfer (subject-norm, all_sentences) | zuco2->zuco1 | eeg_bandpower | 0.0045 | 0.0038 | 0.0233 | 0.0233 |
-| transfer (subject-norm, all_sentences) | zuco2->zuco1 | duration_only | 0.0058 | 0.0038 | 0.0265 | 0.0233 |
-| transfer (subject-norm, all_sentences) | zuco2->zuco1 | random_input | 0.0036 | 0.0038 | 0.0236 | 0.0233 |
-| representations, clean EEG, double | zuco1 | bandpower / plain | 0.0200 | 0.0256 | 0.1057 | 0.1091 |
-| representations, clean EEG, double | zuco1 | bandpower / quality_weighted | 0.0179 | 0.0256 | 0.1045 | 0.1091 |
-| representations, clean EEG, double | zuco1 | bandpower / random_input | 0.0209 | 0.0256 | 0.1003 | 0.1091 |
-| representations, clean EEG, double | zuco1 | ssl / ssl_trained | 0.0243 | 0.0256 | 0.1065 | 0.1091 |
-| representations, clean EEG, double | zuco1 | ssl / untrained_encoder | 0.0293 | 0.0256 | 0.1105 | 0.1091 |
-| representations, clean EEG, double | zuco1 | ssl / random_input | 0.0268 | 0.0256 | 0.1094 | 0.1091 |
-| representations, clean EEG, double | zuco2 | bandpower / plain | 0.0170 | 0.0252 | 0.1022 | 0.1076 |
-| representations, clean EEG, double | zuco2 | bandpower / quality_weighted | 0.0298 | 0.0252 | 0.1127 | 0.1076 |
-| representations, clean EEG, double | zuco2 | bandpower / random_input | 0.0270 | 0.0252 | 0.1127 | 0.1076 |
-| representations, clean EEG, double | zuco2 | ssl / ssl_trained | 0.0235 | 0.0252 | 0.0985 | 0.1076 |
-| representations, clean EEG, double | zuco2 | ssl / untrained_encoder | 0.0204 | 0.0252 | 0.1003 | 0.1076 |
-| representations, clean EEG, double | zuco2 | ssl / random_input | 0.0266 | 0.0252 | 0.1067 | 0.1076 |
-| representations, clean EEG, double | zuco1 | cbramod / frozen_pretrained | 0.0245 | 0.0256 | 0.1109 | 0.1091 |
-| representations, clean EEG, double | zuco1 | cbramod / frozen_pretrained_quality_weighted | 0.0244 | 0.0256 | 0.1078 | 0.1091 |
-| representations, clean EEG, double | zuco1 | cbramod / untrained_cbramod | 0.0225 | 0.0256 | 0.1022 | 0.1091 |
-| representations, clean EEG, double | zuco1 | cbramod / random_input | 0.0223 | 0.0256 | 0.1061 | 0.1091 |
-| representations, clean EEG, double | zuco2 | cbramod / frozen_pretrained | 0.0290 | 0.0252 | 0.1173 | 0.1076 |
-| representations, clean EEG, double | zuco2 | cbramod / frozen_pretrained_quality_weighted | 0.0115 | 0.0252 | 0.0896 | 0.1076 |
-| representations, clean EEG, double | zuco2 | cbramod / untrained_cbramod | 0.0199 | 0.0252 | 0.1106 | 0.1076 |
-| representations, clean EEG, double | zuco2 | cbramod / random_input | 0.0226 | 0.0252 | 0.1040 | 0.1076 |
-
-_Subject-level (clean EEG, double regime): mean over test subjects of MRR minus chance, 95% bootstrap CI over subjects._
-
-| dataset | method | n_subjects | mrr_minus_chance_mean | mrr_minus_chance_ci_lo | mrr_minus_chance_ci_hi |
-|---|---|---|---|---|---|
-| zuco1 | cbramod_frozen | 12 | 0.0027 | -0.0069 | 0.0138 |
-| zuco1 | cbramod_untrained | 12 | -0.0068 | -0.0166 | 0.0019 |
-| zuco1 | bandpower | 12 | -0.0031 | -0.0128 | 0.0057 |
-| zuco1 | random_input | 12 | -0.0000 | -0.0094 | 0.0092 |
-| zuco2 | cbramod_frozen | 8 | 0.0101 | 0.0006 | 0.0238 |
-| zuco2 | cbramod_untrained | 8 | 0.0029 | -0.0101 | 0.0159 |
-| zuco2 | bandpower | 8 | -0.0054 | -0.0193 | 0.0116 |
-| zuco2 | random_input | 8 | -0.0127 | -0.0287 | 0.0035 |
-
-All tables: `experiments/results/results_summary.md`.
-<!-- RESULTS:END -->
-
-Figures in `experiments/results/figures/`: `fig_a_eeg_vs_controls.png`, `fig_b_noise.png`, `fig_c_transfer.png`,
-`fig_d_subjects.png`. Discussion: `reports/final_report.md`. Trained self-supervised encoders:
-`experiments/checkpoints/` (one per dataset and fold).
-
-## Limitations
-
-- Only 8 of the 18 ZuCo 2.0 subjects are used.
-- Noise is synthetic Gaussian noise added after recording, to test data only.
-- Only 4 subject folds; test sets are small (tens of candidate sentences, 8 to 12 test subjects).
-  Differences of about 0.01 MRR are within fold-to-fold variation, and single subjects can move a group mean by that
-  much. No multiple-comparison correction was applied to the bootstrap intervals.
-- Window-to-sentence alignment is inferred from order and duration, not from recorded sentence IDs.
-- Per-subject normalisation (`--subject-norm`) is transductive: it uses the test subject's own statistics.
-- The pretrained encoder (CBraMod) was pretrained on clinical EEG (TUEG); it was used frozen, without fine-tuning,
-  and with several fixed adaptations (upsampling from 100 Hz, 2.0 s windows, assumed amplitude scale, mean/SD pooling
-  over channels). Other adaptations or fine-tuning might behave differently. Only one pretrained model was run.
-- The self-supervised encoder is small and was trained for 6 epochs on CPU; it was not tuned.
-
-## Setup (Windows, PowerShell)
-
-```
-cd C:\eeg-language-decoding
+```powershell
 python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -e .
-pip install matplotlib pytest "braindecode[hub]" osfclient
+.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+pip install sentence-transformers matplotlib osfclient
 pytest -q
 ```
 
-The first run of `scripts/run_pretrained.py` downloads the CBraMod checkpoint (about 20 MB) from Hugging Face.
-Optional Colab (not tested by the author): `!git clone https://github.com/RahmaDawy/eeg-language-decoding`,
-`%cd eeg-language-decoding`, `!pip install -e . matplotlib pytest "braindecode[hub]" osfclient`, put the data in
-`data/raw/zuco1` and `data/raw/zuco2` (for example from Google Drive), then run the commands below with `!` in front.
+Google Colab: clone the repo, then run `!pip install -e ".[dev]" sentence-transformers matplotlib osfclient` and call the scripts with `!python scripts/<name>.py`. A GPU is used automatically by `run_final.py` if available; the CPU is enough.
 
-## Data access and licence
+## Data (not included in this repository)
 
-The data is **not** in this repository. Download the preprocessed natural-reading recordings and the task materials
-from OSF:
-
-- ZuCo 1.0: https://osf.io/q3zws/overview (OSF project `q3zws`)
-- ZuCo 2.0: https://osf.io/2urht/overview (OSF project `2urht`)
-
-`scripts/download_zuco.py` downloads selected files into `data/raw`. Example for ZuCo 2 (add `--dry-run` first to list
-what would be downloaded; for ZuCo 1 use `--project q3zws`, `--out data/raw/zuco1` and the task folder name shown on OSF):
-
-```
-python scripts\download_zuco.py --project 2urht --task "task1 - NR" --out data/raw/zuco2 --areas Preprocessed task_materials --subjects YAC YAG YAK YDG YDR YFR YFS YHS
-```
-
-Do not run other scripts with `--help`: they do not parse arguments and would run in full.
-Use of the data is governed by the terms on the OSF pages; check them before redistributing anything. `data/` and all
-`.mat` and `.npy` files are git-ignored. The CBraMod checkpoint is distributed by braindecode (BSD-3-Clause for the
-code); its pretraining data (TUEG) has its own terms, so check the Hugging Face model page before reuse.
+- ZuCo 1.0: https://osf.io/q3zws/ - ZuCo 2.0: https://osf.io/2urht/
+- The data are **not** redistributed here. Check the licence and terms on each OSF page before using or sharing them.
+- Used: preprocessed natural-reading (NR) EEG, ZuCo 1.0 (12 subjects) and 8 of the 18 ZuCo 2.0 subjects, plus the ZuCo 1.0 "Matlab files" (about 10 GB), which give the true sentence for every EEG row.
 
 ## Reproduce
 
-Preparation. `build_dataset.py` takes no arguments and processes everything in `data/raw` (about a minute or two).
-Its final summary section is outdated: it prints "aligned 0", a stale hint to run `run_baseline.py`, and ends with a
-`KeyError` traceback. This happens after all its output files (`windows.csv`, `features.npy`, `sentences.csv`,
-`sent_emb.npy`) have been saved, so it can be ignored. `align_windows.py` then creates `windows_aligned.csv`.
-```
-python scripts\build_dataset.py
+```powershell
+# 1. download (data go to data\raw, which is git-ignored)
+python scripts\download_zuco.py --project 2urht --task "task1 - NR" --out data\raw\zuco2 --areas Preprocessed task_materials --subjects YAC YAG YAK YDG YDR YFR YFS YHS --no-et
+python scripts\download_zuco.py --project q3zws --task "task2 - NR" --out data\raw\zuco1 --areas Preprocessed task_materials --no-et
+python scripts\download_zuco.py --project q3zws --task "task2 - NR" --out data\raw\zuco1 --areas "Matlab files"
+
+# 2. continuous-EEG experiments (windows from triggers 10->11, aligned to sentences by order and duration)
+python scripts\build_dataset.py        # see --help for options
 python scripts\align_windows.py
-```
-Band-power experiments with controls (unseen subjects; transfer):
-```
 python scripts\run_experiments.py --regime double
-python scripts\run_experiments.py --regime double --subject-norm
 python scripts\run_experiments.py --regime subject_only
-python scripts\run_experiments.py --regime subject_only --subject-norm
+python scripts\run_experiments.py --regime double --subject-norm
 python scripts\run_transfer.py
-python scripts\run_transfer.py --subject-norm
+
+# 3. true-label experiments (ZuCo 1.0 Matlab files)
+python scripts\make_cache.py
+python scripts\run_final.py
+python scripts\run_words.py
+python scripts\run_positive_control.py
 ```
-Noise, quality weighting, self-supervised and pretrained encoders, figures and tests:
-```
-python scripts\make_signals.py
-python scripts\run_robust_ssl.py
-python scripts\run_pretrained.py
-python scripts\make_figures.py
-pytest -q
-```
-Approximate run times on a CPU laptop: `make_signals.py` 10 min, `run_robust_ssl.py` 3 min, `run_pretrained.py` 31 min
-(encodings are cached in `data/processed/cbramod_*.npy`), the rest a few minutes. `--pilot` on `run_robust_ssl.py` and
-`run_pretrained.py` is a quick smoke test; its outputs are not results.
+
+## Results (all numbers from the saved CSVs in `experiments/results/metrics`)
+
+Evaluation: unseen subjects **and** unseen sentences (4 leave-subjects-out folds, leakage checked on every fold); candidates = the unique test sentences; metric `sim_margin` = mean cosine similarity of the correct sentence minus the others (0 = chance; random input is about 0).
+
+**Main table - ZuCo 1.0, 12 subjects, true sentence labels, 45 candidates per fold (chance top-1 = 2.2%, chance MRR = 0.098)**
+
+| Method (clean EEG) | top-1 | MRR | sim_margin (SD over folds) |
+|---|---|---|---|
+| Random input (control) | 2.2% | 0.098 | 0.0000 (0.0027) |
+| Reading length only (control, no EEG) | 2.2% | 0.104 | 0.0093 (0.0005) |
+| Authors' band features | 2.4% | 0.103 | 0.0053 (0.0033) |
+| Our band power (whole sentence) | 3.1% | 0.110 | 0.0057 (0.0070) |
+| Band power of 1.5 s chunks | 1.8% | 0.103 | 0.0071 (0.0089) |
+| ... with quality weighting | 3.0% | 0.113 | 0.0086 (0.0089) |
+| Self-supervised encoder (trained on ZuCo, no labels) | 3.3% | 0.107 | 0.0005 (0.0054) |
+| Same encoder, untrained | 2.9% | 0.102 | 0.0000 (0.0050) |
+
+No EEG method beats the random-input control and the reading-length control by more than the spread across folds.
+
+**Noise added to the test EEG** (`sim_margin`; noise = 0 / 0.5 / 1 / 2 x each channel's own standard deviation)
+
+| Method | clean | mild | moderate | strong |
+|---|---|---|---|---|
+| Band power of chunks | 0.0071 | -0.0017 | 0.0031 | 0.0044 |
+| Self-supervised encoder | 0.0005 | 0.0003 | 0.0004 | -0.0007 |
+
+Curves are flat because there is no sentence information to degrade.
+
+**Other experiments** (top-1 for EEG / random input / duration shortcut / chance)
+
+| Experiment | Candidates | EEG | Random | Duration | Chance |
+|---|---|---|---|---|---|
+| ZuCo 1.0 continuous windows, unseen subjects + sentences | 39 | 2.8% | 2.5% | 3.7% | 2.6% |
+| ZuCo 2.0 (8 subjects), same | 44 | 2.0% | 1.8% | 1.4% | 2.3% |
+| Transfer ZuCo 1.0 -> 2.0 (source-only decoder, unseen sentences) | 259 | 0.48% | 0.34% | 0.34% | 0.39% |
+| Transfer ZuCo 2.0 -> 1.0 | 226 | 0.53% | 0.42% | 0.45% | 0.44% |
+
+**Positive control** (Pearson r on held-out rows; ZuCo 1.0, 48,638 word rows): EEG features predict log first-fixation duration within a subject (r = 0.146, SD 0.072 over 12 subjects; random features 0.012), and across subjects only after per-subject standardization (r = 0.082; raw features -0.031). They do not predict word length (r about 0.008). Word-level retrieval and sentence retrieval from word-level EEG are at the random-input level (sentence MRR 0.094 vs 0.095 random vs 0.098 chance).
+
+![results](experiments/results/figures/final_results.png)
+
+## Limitations
+
+- Sentence-level and first-fixation band features only; no time-resolved word-level decoding.
+- Few folds (4), no subject-level bootstrap confidence intervals, no significance tests; small differences are within the spread across folds.
+- Per-subject standardization uses unlabeled test-subject EEG (transductive) and is reported separately.
+- Noise is synthetic white noise; the quality indicator is a simple artifact fraction.
+- ZuCo 2.0 uses 8 of 18 subjects and the preprocessed continuous recordings, so its sentence alignment is inferred from window durations (per-subject Spearman with sentence length: median 0.83 for ZuCo 1.0 and 0.71 for ZuCo 2.0, about 0 for shuffled sentences). In ZuCo 1.0 these windows covered 264 of 300 sentences; the reason is not investigated.
+- The self-supervised encoder is small and untuned (8 epochs); no pretrained EEG encoder was run because I did not find and verify a public model that accepts this 104-channel data.
+- Word retrieval "chance" is not meaningful because frequent words dominate the candidates; compare against the random-input control.
+
+## References
+
+ZuCo, a simultaneous EEG and eye-tracking resource for natural sentence reading (ZuCo 1.0); ZuCo 2.0: A Dataset of Physiological Recordings During Natural Reading and Annotation (arXiv:1912.00903); Are EEG-to-Text Models Working? (arXiv:2405.06459), which motivates the random-noise control used here.
