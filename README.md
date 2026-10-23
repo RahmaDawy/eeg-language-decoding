@@ -1,3 +1,4 @@
+**Results with figures: [RESULTS.md](RESULTS.md)**
 # EEG Representation Learning for Brain Signal Decoding
 
 Does EEG recorded while people read sentences carry information about *which* sentence they read? This project tests that on the ZuCo 1.0 and ZuCo 2.0 datasets with sentence retrieval, using a handcrafted baseline and a self-supervised encoder, unseen-subject and unseen-sentence evaluation, noise and quality experiments, cross-dataset transfer, and random-input and reading-length controls.
