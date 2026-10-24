@@ -83,6 +83,12 @@ def md_table(header, rows):
     return "\n".join(out)
 
 
+def df_table(df, k=4):
+    """Render any DataFrame as a markdown table (floats rounded), so column names need not be known in advance."""
+    rows = [[fmt(v, k) if isinstance(v, (float, np.floating)) else v for v in r] for r in df.itertuples(index=False)]
+    return md_table([str(c) for c in df.columns], rows)
+
+
 # --------------------------------------------------------------------------- data for the main comparison
 def build_main():
     parts = []
@@ -345,13 +351,16 @@ def main():
     main_df, f, pc, w = build_main(), rd("results_final.csv"), rd("results_positive_control.csv"), rd("results_words.csv")
     tr, trn = rd("results_transfer.csv"), rd("results_transfer_subjnorm.csv")
     ev1, ev2, al = rd("events_zuco1.csv"), rd("events_zuco2.csv"), rd("alignment_quality.csv")
+    gs, gp = rd("results_gru_summary.csv"), rd("results_gru_pairs.csv")
     img = {"split": fig_pipeline_split(), "data": fig_data(), "align": fig_alignment(),
            "main": fig_main(main_df) if main_df is not None else None,
            "noise": fig_noise(f) if f is not None else None,
            "pos": fig_positive(pc) if pc is not None else None,
            "words": fig_words(w) if w is not None else None,
            "transfer": fig_transfer(tr) if tr is not None else None,
-           "within": fig_within()}
+           "within": fig_within(),
+           "gru": "experiments/results/figures/fig9_gru_subject_level.png"
+           if (FIG / "fig9_gru_subject_level.png").exists() else None}
 
     def pic(key, alt):
         return f"![{alt}]({img[key]})" if img.get(key) else "_(no data for this figure yet)_"
@@ -396,7 +405,7 @@ def main():
            "- **Metrics:** *top-1* = the correct sentence is ranked first; *MRR* = average of 1/rank of the correct sentence; "
            "*sim_margin* = similarity of the decoded vector to the correct sentence minus to the other sentences (0 = no information, and it detects weak effects that top-1 misses).",
            "- **Controls:** (1) random numbers through the identical pipeline; (2) reading length only (number of samples and words, no brain signal). A real effect must beat both.",
-           "- **Folds:** 4 leave-subjects-out folds; error bars are the SD across folds; no significance tests.\n",
+           "- **Folds:** 4 leave-subjects-out folds; error bars are the SD across folds (the GRU section uses bootstrap confidence intervals over test subjects).\n",
            "## 3. The data\n", pic("data", "data overview"), ""]
     rows = []
     for name, ev in (("ZuCo 1.0", ev1), ("ZuCo 2.0 (8 of 18 subjects)", ev2)):
@@ -420,7 +429,8 @@ def main():
                "must exceed the larger control mean by more than its own SD across folds.\n"]
         if "cbramod_pretrained" in S.index and "cbramod_random_init" in S.index:
             md.append(f"**Does pretraining matter?** CBraMod pretrained `sim_margin` = {fmt(S.loc['cbramod_pretrained', 'sm'], 4)} vs the same network "
-                      f"randomly initialised = {fmt(S.loc['cbramod_random_init', 'sm'], 4)} (random input = {fmt(S.loc['random_input', 'sm'], 4)}).\n")
+                      f"randomly initialised = {fmt(S.loc['cbramod_random_init', 'sm'], 4)} (random input = {fmt(S.loc['random_input', 'sm'], 4)}). "
+                      "CBraMod was evaluated on clean EEG only (no noise or quality experiments).\n")
         if "ssl_trained" in S.index and "untrained_encoder" in S.index:
             md.append(f"**Does self-supervised learning matter?** Trained encoder `sim_margin` = {fmt(S.loc['ssl_trained', 'sm'], 4)} vs untrained "
                       f"= {fmt(S.loc['untrained_encoder', 'sm'], 4)}.\n")
@@ -479,18 +489,41 @@ def main():
         md += ["## 8. Earlier experiment on the continuous recordings\n", pic("within", "continuous windows"), "",
                "Same conclusion with inferred alignment on both datasets: EEG is indistinguishable from random input; only reading duration is above chance.\n"]
 
-    md += ["## 9. Conclusions\n",
+    if gs is not None:
+        md += ["## 9. Word-level GRU and the reading-behaviour control\n",
+               "A small GRU reads the words of a sentence in order and is trained to match the sentence embedding "
+               "(12 subjects, 4 leave-subjects-out folds, unseen sentences, 45 candidates). Inputs per word: "
+               "random numbers (`gru_random`), reading behaviour only = first-fixation time + word length, no EEG (`gru_behavior`), "
+               "EEG with train-statistics normalisation (`gru_eeg_trainnorm`), EEG with per-subject normalisation "
+               "(`gru_eeg_subjnorm`, transductive), and EEG + behaviour. The `ridge_*` rows are the sentence-level ridge decoder on the same subjects.\n",
+               "**Decision rule (fixed before the run):** an EEG model counts as a real finding only if its paired difference "
+               "(bootstrap over test subjects, 95% CI) against BOTH random input and the behaviour-only control is entirely above 0. "
+               "Exploratory: one seed, no correction for multiple comparisons.\n",
+               pic("gru", "GRU subject-level results"), "",
+               "Per-subject metrics, mean over test subjects, with 95% bootstrap CI over subjects:\n", df_table(gs), ""]
+        if gp is not None:
+            md += ["Paired differences (a minus b), bootstrap over subjects; `share_le_0` = share of resamples with difference <= 0:\n",
+                   df_table(gp), ""]
+        md += ["In the run reported here, behaviour alone (fixation time + word length, no EEG) is clearly above random input, so word-level "
+               "'decoding' can work through reading behaviour alone. EEG with train-statistics normalisation is not above random input. "
+               "Adding EEG to behaviour does not improve on behaviour alone. Per-subject-normalised EEG is above random input in some metrics "
+               "but stays below the behaviour-only model. By the decision rule, no EEG model counts as a real finding. "
+               "The tables above are the authoritative numbers.\n"]
+
+    md += ["## 10. Conclusions\n",
            "1. Under strict evaluation (unseen subjects and sentences) no tested EEG representation beat both controls." if not winners
            else f"1. Representations exceeding both controls by more than the fold spread: {', '.join(winners)} (preliminary).",
            "2. The detectable EEG information is reading-related (fixation duration), strongest within a person; it transfers across people only partly.",
            "3. The noise control and the reading-length control are essential: without them, small above-chance numbers would look like decoding.",
-           "4. Self-supervised pre-training on ZuCo and quality weighting did not produce a reliable gain; transfer between datasets was at chance.\n",
-           "## 10. Limitations and next steps\n",
+           "4. Self-supervised pre-training on ZuCo, the frozen pretrained CBraMod encoder and quality weighting did not produce a reliable gain; transfer between datasets was at chance.",
+           "5. A word-level model fed only reading behaviour (no EEG) beats random input, and EEG does not add to it under the decision rule. "
+           "Good-looking word-level 'EEG decoding' numbers therefore need a behaviour-only control before they can be attributed to the brain signal.\n",
+           "## 11. Limitations and next steps\n",
            "- Only sentence-level and first-fixation band features were tested; time-locked word-level responses (for example N400-type effects) are the main untested direction.",
-           "- 4 folds, no bootstrap confidence intervals or significance tests; ZuCo 2.0 uses 8 of 18 subjects.",
+           "- 4 folds and one seed; bootstrap confidence intervals over subjects exist only for the GRU comparison; no significance tests or multiple-comparison correction; ZuCo 2.0 uses 8 of 18 subjects.",
            "- Continuous-recording alignment is inferred; ZuCo 1.0 windows covered 264 of 300 sentences (cause not investigated).",
            "- Noise is synthetic white noise; the quality score is a simple artifact fraction; the self-supervised encoder is small and untuned.",
-           "- CBraMod was pretrained on 19-channel 10-20 recordings; applying it to 104 EGI channels is out of its training distribution.",
+           "- CBraMod was pretrained on 19-channel 10-20 recordings; applying it to 104 EGI channels is out of its training distribution. It was evaluated on clean EEG only (no noise or quality experiments) and not fine-tuned.",
            "- Per-subject normalisation is transductive and reported separately."]
     Path("RESULTS.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     print("wrote RESULTS.md")

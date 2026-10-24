@@ -1,16 +1,17 @@
 **Results with figures: [RESULTS.md](RESULTS.md)**
 # EEG Representation Learning for Brain Signal Decoding
 
-Does EEG recorded while people read sentences carry information about *which* sentence they read? This project tests that on the ZuCo 1.0 and ZuCo 2.0 datasets with sentence retrieval, using a handcrafted baseline and a self-supervised encoder, unseen-subject and unseen-sentence evaluation, noise and quality experiments, cross-dataset transfer, and random-input and reading-length controls.
+Does EEG recorded while people read sentences carry information about *which* sentence they read? This project tests that on the ZuCo 1.0 and ZuCo 2.0 datasets with sentence retrieval. It compares a handcrafted band-power baseline, a frozen pretrained EEG encoder (CBraMod) and a self-supervised encoder trained on ZuCo. Evaluation uses unseen subjects and unseen sentences, noise and quality experiments, cross-dataset transfer, and random-input and reading-behaviour controls.
 
-**Main finding (negative result).** Under unseen-subject, unseen-sentence evaluation, EEG-based sentence retrieval is at chance level and indistinguishable from random input, for band-power features, the datasets' own features, and a self-supervised encoder trained on ZuCo. The only signal above chance comes from reading length/time, which carries no sentence meaning. A positive control shows the pipeline *can* detect real EEG information: first-fixation duration is predictable from per-word EEG features (within-subject r = 0.146), but word length and sentence content are not. See `reports/final_report.md`.
+**Main finding (negative result).** Under unseen-subject, unseen-sentence evaluation, EEG-based sentence retrieval is at chance level and indistinguishable from random input. This holds for band-power features, the datasets' own features, a self-supervised encoder trained on ZuCo, and the frozen pretrained CBraMod encoder. The only signal above chance comes from reading length/time, which carries no sentence meaning. A positive control shows the pipeline *can* detect real EEG information: first-fixation duration is predictable from per-word EEG features (within-subject r = 0.146), but word length and sentence content are not. A word-level GRU shows that reading behaviour alone (fixation time + word length, no EEG) beats random input, and EEG does not add to it. See `reports/final_report.md`.
 
 ## Repository layout
 
 - `src/eegdecode/` - metrics, subject/sentence splits with leakage checks, band-power features, ridge alignment, sentence embeddings, EEG loading
-- `scripts/` - one script per step (`download_zuco.py`, `build_dataset.py`, `align_windows.py`, `run_experiments.py`, `run_transfer.py`, `make_cache.py`, `run_groundtruth.py`, `run_final.py`, `run_words.py`, `run_positive_control.py`)
-- `tests/` - 38 tests (metrics, split integrity, leakage detector, a synthetic retrieval test with a noise-input control, loaders)
+- `scripts/` - one script per step (`download_zuco.py`, `build_dataset.py`, `align_windows.py`, `run_experiments.py`, `run_transfer.py`, `make_cache.py`, `run_groundtruth.py`, `run_final.py`, `run_words.py`, `run_positive_control.py`, `smoke_cbramod.py`, `run_cbramod.py`, `run_gru.py`, `make_report.py`)
+- `tests/` - 39 tests (metrics, split integrity, leakage detector, a synthetic retrieval test with a noise-input control, loaders, encoder checkpoint)
 - `experiments/results/` - result CSVs and figures
+- `RESULTS.md` - generated results page with figures (`python scripts\make_report.py`)
 - `reports/final_report.md` - methods, results, limitations
 
 ## Setup (Windows)
@@ -23,7 +24,7 @@ pip install sentence-transformers matplotlib osfclient
 pytest -q
 ```
 
-Google Colab: clone the repo, then run `!pip install -e ".[dev]" sentence-transformers matplotlib osfclient` and call the scripts with `!python scripts/<name>.py`. A GPU is used automatically by `run_final.py` if available; the CPU is enough.
+CBraMod is loaded through `braindecode` (Hugging Face weights `braindecode/cbramod-pretrained`). Google Colab: clone the repo, then run `!pip install -e ".[dev]" sentence-transformers matplotlib osfclient` and call the scripts with `!python scripts/<name>.py`. A GPU is used automatically by `run_final.py` if available; the CPU is enough.
 
 ## Data (not included in this repository)
 
@@ -52,6 +53,15 @@ python scripts\make_cache.py
 python scripts\run_final.py
 python scripts\run_words.py
 python scripts\run_positive_control.py
+
+# 4. pretrained encoder (CBraMod) and word-level GRU
+python scripts\smoke_cbramod.py
+python scripts\run_cbramod.py extract
+python scripts\run_cbramod.py eval
+python scripts\run_gru.py
+
+# 5. generate RESULTS.md and figures
+python scripts\make_report.py
 ```
 
 ## Results (all numbers from the saved CSVs in `experiments/results/metrics`)
@@ -73,6 +83,35 @@ Evaluation: unseen subjects **and** unseen sentences (4 leave-subjects-out folds
 
 No EEG method beats the random-input control and the reading-length control by more than the spread across folds.
 
+**Pretrained encoder (CBraMod, frozen), same folds.** This evaluation used its own row set (3,266 sentence rows), so the control numbers differ slightly from the table above; compare methods within this table only. It used clean EEG only (no noise or quality experiments).
+
+| Method | top-1 | MRR | sim_margin (SD over folds) |
+|---|---|---|---|
+| Random input (control) | 1.94% | 0.0981 | -0.0010 (0.0019) |
+| Reading length only (control, no EEG) | 2.27% | 0.1033 | 0.0086 (0.0008) |
+| Authors' band features | 2.68% | 0.1037 | 0.0056 (0.0036) |
+| Our band power | 2.28% | 0.1020 | 0.0052 (0.0056) |
+| Our band power + per-subject norm | 2.69% | 0.1044 | 0.0063 (0.0046) |
+| **CBraMod, pretrained (frozen)** | 2.07% | 0.1026 | 0.0023 (0.0034) |
+| CBraMod, pretrained + per-subject norm | 2.06% | 0.1034 | 0.0028 (0.0038) |
+| CBraMod, random init | 1.85% | 0.0937 | -0.0010 (0.0031) |
+| CBraMod, random init + per-subject norm | 1.44% | 0.0911 | 0.0034 (0.0116) |
+
+Chance is 2.22% top-1 and 0.0977 MRR. Frozen pretrained CBraMod is at chance and no better than band power or the no-EEG reading-length control. The "per-subject norm" rows are transductive (see Limitations).
+
+**Word-level GRU and the reading-behaviour control** (12 subjects, 4 folds, unseen sentences, 45 candidates; MRR above chance, mean over test subjects with 95% bootstrap CI over subjects; one seed)
+
+| Input per word | MRR above chance [95% CI] |
+|---|---|
+| Random numbers | 0.0015 [-0.0080, 0.0114] |
+| Reading behaviour only (first-fixation time + word length, no EEG) | 0.0803 [0.0623, 0.0964] |
+| EEG, train-statistics normalisation | 0.0035 [-0.0057, 0.0155] |
+| EEG, per-subject normalisation (transductive) | 0.0174 [-0.0061, 0.0425] |
+| EEG + behaviour, train-statistics normalisation | -0.0014 [-0.0088, 0.0059] |
+| EEG + behaviour, per-subject normalisation (transductive) | 0.0260 [0.0091, 0.0441] |
+
+Paired differences (MRR, bootstrap over subjects): honest EEG minus random input = +0.0020 [-0.0121, 0.0183]. Per-subject-normalised EEG minus behaviour-only = -0.0629 [-0.0925, -0.0296]. Per-subject-normalised EEG + behaviour minus behaviour-only = -0.0543 [-0.0734, -0.0338]. Decision rule fixed in advance: an EEG model counts as a real finding only if its paired difference against both random input and the behaviour-only control is entirely above 0. No EEG model meets it. Reading behaviour alone is clearly above random input.
+
 **Noise added to the test EEG** (`sim_margin`; noise = 0 / 0.5 / 1 / 2 x each channel's own standard deviation)
 
 | Method | clean | mild | moderate | strong |
@@ -93,18 +132,19 @@ Curves are flat because there is no sentence information to degrade.
 
 **Positive control** (Pearson r on held-out rows; ZuCo 1.0, 48,638 word rows): EEG features predict log first-fixation duration within a subject (r = 0.146, SD 0.072 over 12 subjects; random features 0.012), and across subjects only after per-subject standardization (r = 0.082; raw features -0.031). They do not predict word length (r about 0.008). Word-level retrieval and sentence retrieval from word-level EEG are at the random-input level (sentence MRR 0.094 vs 0.095 random vs 0.098 chance).
 
-![results](experiments/results/figures/final_results.png)
+![results](experiments/results/figures/fig3_main_result.png)
 
 ## Limitations
 
-- Sentence-level and first-fixation band features only; no time-resolved word-level decoding.
-- Few folds (4), no subject-level bootstrap confidence intervals, no significance tests; small differences are within the spread across folds.
+- Sentence-level and first-fixation band features only; no time-locked word-level (ERP-style) decoding. This is the main untested direction.
+- 4 folds and one seed. Bootstrap confidence intervals over subjects exist only for the GRU comparison; no significance tests and no multiple-comparison correction. Small differences are within the spread across folds.
 - Per-subject standardization uses unlabeled test-subject EEG (transductive) and is reported separately.
-- Noise is synthetic white noise; the quality indicator is a simple artifact fraction.
-- ZuCo 2.0 uses 8 of 18 subjects and the preprocessed continuous recordings, so its sentence alignment is inferred from window durations (per-subject Spearman with sentence length: median 0.83 for ZuCo 1.0 and 0.71 for ZuCo 2.0, about 0 for shuffled sentences). In ZuCo 1.0 these windows covered 264 of 300 sentences; the reason is not investigated.
-- The self-supervised encoder is small and untuned (8 epochs); no pretrained EEG encoder was run because I did not find and verify a public model that accepts this 104-channel data.
+- Noise is synthetic white noise; the quality indicator is a simple artifact fraction. CBraMod was evaluated on clean EEG only.
+- CBraMod was pretrained on 19-channel 10-20 recordings, and ZuCo has 104 EGI channels, so the montage mismatch may weaken it. It was used frozen and not fine-tuned.
+- ZuCo 2.0 uses 8 of 18 subjects and the preprocessed continuous recordings, so its sentence alignment is inferred from window durations (per-subject Spearman with sentence length: median 0.83 for ZuCo 1.0 and 0.71 for ZuCo 2.0, about 0 for shuffled sentences). In ZuCo 1.0 these windows covered 264 of 300 sentences; the reason is not investigated. The ZuCo 2.0 Matlab files (34.6 GB) were not downloaded.
+- The self-supervised encoder is small and untuned (8 epochs).
 - Word retrieval "chance" is not meaningful because frequent words dominate the candidates; compare against the random-input control.
 
 ## References
 
-ZuCo, a simultaneous EEG and eye-tracking resource for natural sentence reading (ZuCo 1.0); ZuCo 2.0: A Dataset of Physiological Recordings During Natural Reading and Annotation (arXiv:1912.00903); Are EEG-to-Text Models Working? (arXiv:2405.06459), which motivates the random-noise control used here.
+ZuCo, a simultaneous EEG and eye-tracking resource for natural sentence reading (ZuCo 1.0); ZuCo 2.0: A Dataset of Physiological Recordings During Natural Reading and Annotation (arXiv:1912.00903); Are EEG-to-Text Models Working? (arXiv:2405.06459), which motivates the random-noise control used here; CBraMod (ICLR 2025).

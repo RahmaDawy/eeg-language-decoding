@@ -33,7 +33,7 @@ flowchart LR
 - **Candidates and chance:** for each test EEG the decoder ranks 45 candidate sentences, so guessing gets top-1 = 1/45 = 2.2%.
 - **Metrics:** *top-1* = the correct sentence is ranked first; *MRR* = average of 1/rank of the correct sentence; *sim_margin* = similarity of the decoded vector to the correct sentence minus to the other sentences (0 = no information, and it detects weak effects that top-1 misses).
 - **Controls:** (1) random numbers through the identical pipeline; (2) reading length only (number of samples and words, no brain signal). A real effect must beat both.
-- **Folds:** 4 leave-subjects-out folds; error bars are the SD across folds; no significance tests.
+- **Folds:** 4 leave-subjects-out folds; error bars are the SD across folds (the GRU section uses bootstrap confidence intervals over test subjects).
 
 ## 3. The data
 
@@ -73,7 +73,7 @@ Median per-subject Spearman: ZuCo 1.0 = 0.83; ZuCo 2.0 = 0.71. The true-label ex
 
 *Beats both controls?* is a conservative rule of thumb, not a significance test: the method's mean `sim_margin` must exceed the larger control mean by more than its own SD across folds.
 
-**Does pretraining matter?** CBraMod pretrained `sim_margin` = 0.0023 vs the same network randomly initialised = -0.0010 (random input = -0.0000).
+**Does pretraining matter?** CBraMod pretrained `sim_margin` = 0.0023 vs the same network randomly initialised = -0.0010 (random input = -0.0000). CBraMod was evaluated on clean EEG only (no noise or quality experiments).
 
 **Does self-supervised learning matter?** Trained encoder `sim_margin` = 0.0005 vs untrained = 0.0000.
 
@@ -137,18 +137,69 @@ The decoder is fitted on the source dataset only (no target labels) and tested o
 
 Same conclusion with inferred alignment on both datasets: EEG is indistinguishable from random input; only reading duration is above chance.
 
-## 9. Conclusions
+## 9. Word-level GRU and the reading-behaviour control
+
+A small GRU reads the words of a sentence in order and is trained to match the sentence embedding (12 subjects, 4 leave-subjects-out folds, unseen sentences, 45 candidates). Inputs per word: random numbers (`gru_random`), reading behaviour only = first-fixation time + word length, no EEG (`gru_behavior`), EEG with train-statistics normalisation (`gru_eeg_trainnorm`), EEG with per-subject normalisation (`gru_eeg_subjnorm`, transductive), and EEG + behaviour. The `ridge_*` rows are the sentence-level ridge decoder on the same subjects.
+
+**Decision rule (fixed before the run):** an EEG model counts as a real finding only if its paired difference (bootstrap over test subjects, 95% CI) against BOTH random input and the behaviour-only control is entirely above 0. Exploratory: one seed, no correction for multiple comparisons.
+
+![GRU subject-level results](experiments/results/figures/fig9_gru_subject_level.png)
+
+Per-subject metrics, mean over test subjects, with 95% bootstrap CI over subjects:
+
+| method | subjects | top1_pct | chance_top1_pct | mrr | chance_mrr | sim_margin | sm_lo | sm_hi | mrr_above_chance | mrr_lo | mrr_hi |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| ridge_random | 12 | 2.2710 | 2.2222 | 0.0951 | 0.0977 | -0.0040 | -0.0074 | -0.0008 | -0.0026 | -0.0120 | 0.0055 |
+| ridge_length_only | 12 | 2.1722 | 2.2222 | 0.1051 | 0.0977 | 0.0118 | 0.0095 | 0.0145 | 0.0075 | 0.0018 | 0.0129 |
+| ridge_official_raw | 12 | 2.8162 | 2.2222 | 0.1012 | 0.0977 | 0.0047 | 0.0004 | 0.0099 | 0.0035 | -0.0033 | 0.0109 |
+| ridge_official_subjnorm | 12 | 2.3656 | 2.2222 | 0.1057 | 0.0977 | 0.0125 | 0.0051 | 0.0203 | 0.0081 | -0.0032 | 0.0177 |
+| gru_random | 12 | 2.3693 | 2.2222 | 0.0991 | 0.0977 | 0.0001 | -0.0034 | 0.0028 | 0.0015 | -0.0080 | 0.0114 |
+| gru_behavior | 12 | 5.6899 | 2.2222 | 0.1780 | 0.0977 | 0.0412 | 0.0358 | 0.0457 | 0.0803 | 0.0623 | 0.0964 |
+| gru_eeg_trainnorm | 12 | 1.8416 | 2.2222 | 0.1012 | 0.0977 | 0.0027 | -0.0023 | 0.0081 | 0.0035 | -0.0057 | 0.0155 |
+| gru_eeg_subjnorm | 12 | 3.6147 | 2.2222 | 0.1151 | 0.0977 | 0.0125 | 0.0045 | 0.0207 | 0.0174 | -0.0061 | 0.0425 |
+| gru_eeg_trainnorm+behavior | 12 | 1.4108 | 2.2222 | 0.0963 | 0.0977 | 0.0018 | -0.0036 | 0.0083 | -0.0014 | -0.0088 | 0.0059 |
+| gru_eeg_subjnorm+behavior | 12 | 3.4955 | 2.2222 | 0.1236 | 0.0977 | 0.0115 | 0.0053 | 0.0174 | 0.0260 | 0.0091 | 0.0441 |
+
+Paired differences (a minus b), bootstrap over subjects; `share_le_0` = share of resamples with difference <= 0:
+
+| a | b | metric | mean_diff | lo | hi | share_le_0 | subjects |
+|---|---|---|---|---|---|---|---|
+| gru_eeg_trainnorm | gru_random | sim_margin | 0.0026 | -0.0045 | 0.0094 | 0.2295 | 12 |
+| gru_eeg_trainnorm | gru_random | mrr | 0.0020 | -0.0121 | 0.0183 | 0.4235 | 12 |
+| gru_eeg_trainnorm | gru_behavior | sim_margin | -0.0385 | -0.0443 | -0.0319 | 1.0000 | 12 |
+| gru_eeg_trainnorm | gru_behavior | mrr | -0.0768 | -0.0932 | -0.0576 | 1.0000 | 12 |
+| gru_eeg_subjnorm | gru_random | sim_margin | 0.0124 | 0.0031 | 0.0225 | 0.0030 | 12 |
+| gru_eeg_subjnorm | gru_random | mrr | 0.0159 | -0.0073 | 0.0429 | 0.0955 | 12 |
+| gru_eeg_subjnorm | gru_behavior | sim_margin | -0.0287 | -0.0382 | -0.0192 | 1.0000 | 12 |
+| gru_eeg_subjnorm | gru_behavior | mrr | -0.0629 | -0.0925 | -0.0296 | 1.0000 | 12 |
+| gru_eeg_trainnorm+behavior | gru_behavior | sim_margin | -0.0394 | -0.0470 | -0.0308 | 1.0000 | 12 |
+| gru_eeg_trainnorm+behavior | gru_behavior | mrr | -0.0817 | -0.1008 | -0.0605 | 1.0000 | 12 |
+| gru_eeg_subjnorm+behavior | gru_behavior | sim_margin | -0.0298 | -0.0378 | -0.0226 | 1.0000 | 12 |
+| gru_eeg_subjnorm+behavior | gru_behavior | mrr | -0.0543 | -0.0734 | -0.0338 | 1.0000 | 12 |
+| ridge_official_raw | ridge_random | sim_margin | 0.0086 | 0.0034 | 0.0140 | 0.0005 | 12 |
+| ridge_official_raw | ridge_random | mrr | 0.0061 | -0.0038 | 0.0159 | 0.1095 | 12 |
+| ridge_official_subjnorm | ridge_random | sim_margin | 0.0165 | 0.0087 | 0.0244 | 0.0000 | 12 |
+| ridge_official_subjnorm | ridge_random | mrr | 0.0107 | -0.0052 | 0.0264 | 0.0885 | 12 |
+| ridge_official_raw | ridge_length_only | sim_margin | -0.0072 | -0.0112 | -0.0031 | 0.9990 | 12 |
+| ridge_official_raw | ridge_length_only | mrr | -0.0039 | -0.0120 | 0.0052 | 0.8070 | 12 |
+| ridge_official_subjnorm | ridge_length_only | sim_margin | 0.0007 | -0.0065 | 0.0072 | 0.4000 | 12 |
+| ridge_official_subjnorm | ridge_length_only | mrr | 0.0006 | -0.0130 | 0.0119 | 0.4440 | 12 |
+
+In the run reported here, behaviour alone (fixation time + word length, no EEG) is clearly above random input, so word-level 'decoding' can work through reading behaviour alone. EEG with train-statistics normalisation is not above random input. Adding EEG to behaviour does not improve on behaviour alone. Per-subject-normalised EEG is above random input in some metrics but stays below the behaviour-only model. By the decision rule, no EEG model counts as a real finding. The tables above are the authoritative numbers.
+
+## 10. Conclusions
 
 1. Under strict evaluation (unseen subjects and sentences) no tested EEG representation beat both controls.
 2. The detectable EEG information is reading-related (fixation duration), strongest within a person; it transfers across people only partly.
 3. The noise control and the reading-length control are essential: without them, small above-chance numbers would look like decoding.
-4. Self-supervised pre-training on ZuCo and quality weighting did not produce a reliable gain; transfer between datasets was at chance.
+4. Self-supervised pre-training on ZuCo, the frozen pretrained CBraMod encoder and quality weighting did not produce a reliable gain; transfer between datasets was at chance.
+5. A word-level model fed only reading behaviour (no EEG) beats random input, and EEG does not add to it under the decision rule. Good-looking word-level 'EEG decoding' numbers therefore need a behaviour-only control before they can be attributed to the brain signal.
 
-## 10. Limitations and next steps
+## 11. Limitations and next steps
 
 - Only sentence-level and first-fixation band features were tested; time-locked word-level responses (for example N400-type effects) are the main untested direction.
-- 4 folds, no bootstrap confidence intervals or significance tests; ZuCo 2.0 uses 8 of 18 subjects.
+- 4 folds and one seed; bootstrap confidence intervals over subjects exist only for the GRU comparison; no significance tests or multiple-comparison correction; ZuCo 2.0 uses 8 of 18 subjects.
 - Continuous-recording alignment is inferred; ZuCo 1.0 windows covered 264 of 300 sentences (cause not investigated).
 - Noise is synthetic white noise; the quality score is a simple artifact fraction; the self-supervised encoder is small and untuned.
-- CBraMod was pretrained on 19-channel 10-20 recordings; applying it to 104 EGI channels is out of its training distribution.
+- CBraMod was pretrained on 19-channel 10-20 recordings; applying it to 104 EGI channels is out of its training distribution. It was evaluated on clean EEG only (no noise or quality experiments) and not fine-tuned.
 - Per-subject normalisation is transductive and reported separately.
