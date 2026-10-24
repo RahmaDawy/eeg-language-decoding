@@ -1,0 +1,38 @@
+﻿
+File: data\raw\zuco1\task2 - NR\Matlab files\resultsZAB_NR.mat (666.4 MB)
+header: MATLAB 5.0 MAT-file, Platform: PCWIN64, Created on: Wed May 30 15:27:47 2018
+detected format: v5
+
+variables (cheap listing):
+  sentenceData: shape=(1, 300) class=struct
+
+nested structure (loads the file; may take a few seconds):
+sentenceData: object array (cell or struct array), shape=(300,)
+  sentenceData[0]: struct, 22 fields: ['content', 'rawData', 'mean_t1', 'mean_t2', 'mean_a1', 'mean_a2', 'mean_b1', 'mean_b2', 'mean_g1', 'mean_g2', 'mean_t1_diff', 'mean_t2_diff', 'mean_a1_diff', 'mean_a2_diff', 'mean_b1_diff', 'mean_b2_diff', 'mean_g1_diff', 'mean_g2_diff', 'word', 'omissionRate', 'allFixations', 'wordbounds']
+    content: str 'With his interest in race cars, he formed a second company, the Henry Ford C...
+    rawData: ndarray shape=(105, 1837) dtype=float32
+    mean_t1: ndarray shape=(105,) dtype=float64
+    mean_t2: ndarray shape=(105,) dtype=float64
+    mean_a1: ndarray shape=(105,) dtype=float64
+    mean_a2: ndarray shape=(105,) dtype=float64
+    mean_b1: ndarray shape=(105,) dtype=float64
+    mean_b2: ndarray shape=(105,) dtype=float64
+    mean_g1: ndarray shape=(105,) dtype=float64
+    mean_g2: ndarray shape=(105,) dtype=float64
+    mean_t1_diff: ndarray shape=(48,) dtype=float64
+    mean_t2_diff: ndarray shape=(48,) dtype=float64
+    mean_a1_diff: ndarray shape=(48,) dtype=float64
+    mean_a2_diff: ndarray shape=(48,) dtype=float64
+    mean_b1_diff: ndarray shape=(48,) dtype=float64
+    mean_b2_diff: ndarray shape=(48,) dtype=float64
+    mean_g1_diff: ndarray shape=(48,) dtype=float64
+    mean_g2_diff: ndarray shape=(48,) dtype=float64
+    word: object array (cell or struct array), shape=(15,)
+      word[0]: struct, 96 fields: ['content', 'fixPositions', 'nFixations', 'meanPupilSize', 'rawEEG', 'rawET', 'FFD', 'FFD_pupilsize', 'FFD_t1', 'FFD_t2', 'FFD_a1', 'FFD_a2', 'FFD_b1', 'FFD_b2', 'FFD_g1', 'FFD_g2', 'FFD_t1_diff', 'FFD_t2_diff', 'FFD_a1_diff', 'FFD_a2_diff', 'FFD_b1_diff', 'FFD_b2_diff', 'FFD_g1_diff', 'FFD_g2_diff', 'TRT', 'TRT_pupilsize', 'TRT_t1', 'TRT_t2', 'TRT_a1', 'TRT_a2']
+    omissionRate: float 0.2
+    allFixations: struct, 4 fields: ['x', 'y', 'duration', 'pupilsize']
+      x: ndarray shape=(16,) dtype=float64
+      y: ndarray shape=(16,) dtype=float64
+      duration: ndarray shape=(16,) dtype=uint16
+      pupilsize: ndarray shape=(16,) dtype=uint16
+    wordbounds: ndarray shape=(15, 4) dtype=float64
