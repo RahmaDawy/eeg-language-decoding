@@ -524,7 +524,10 @@ def main():
            "- Continuous-recording alignment is inferred; ZuCo 1.0 windows covered 264 of 300 sentences (cause not investigated).",
            "- Noise is synthetic white noise; the quality score is a simple artifact fraction; the self-supervised encoder is small and untuned.",
            "- CBraMod was pretrained on 19-channel 10-20 recordings; applying it to 104 EGI channels is out of its training distribution. It was evaluated on clean EEG only (no noise or quality experiments) and not fine-tuned.",
-           "- Per-subject normalisation is transductive and reported separately."]
+           "- Per-subject normalisation is transductive and reported separately."
+           "- The EEG + behaviour GRUs did worse than behaviour alone; this most likely reflects overfitting of a small GRU to 840 noisy EEG dimensions, so it shows that this model did not use the EEG, not that EEG can never add information.",
+            "- In the GRU comparison the behaviour inputs were z-scored per subject (transductive), which slightly favours the behaviour-only control."
+           ]
     Path("RESULTS.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     print("wrote RESULTS.md")
 
